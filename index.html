@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Urbanismo Inteligente - Fase 3</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app-container">
+        <main id="canvas-container">
+            <div class="canvas-overlay">
+                <span>Capa Activa: Viewport 3D & Asoleamiento Sincronizado</span>
+            </div>
+        </main>
+
+        <aside id="sidebar">
+            <header class="sidebar-header">
+                <h2>Controles Urbanísticos</h2>
+            </header>
+
+            <form id="simulator-form" class="control-group">
+                <fieldset>
+                    <legend>Geometría y Edificación</legend>
+                    
+                    <label for="input-x">Ancho de Lote $x$: <strong id="val-x">15.00</strong> m</label>
+                    <input type="range" id="input-x" min="5" max="35" step="0.1" value="15">
+
+                    <label for="input-b">Límite Contorno $b$: <strong id="val-b">50.00</strong> m</label>
+                    <input type="number" id="input-b" value="50" step="0.1" min="10">
+
+                    <label for="input-floor-height">Altura Entrepiso: <strong id="val-floor-height">3.00</strong> m</label>
+                    <input type="range" id="input-floor-height" min="2.60" max="3.50" step="0.05" value="3.00">
+
+                    <label for="input-floors">Número de Pisos: <strong id="val-floors">4</strong></label>
+                    <input type="range" id="input-floors" min="1" max="10" step="1" value="4">
+                </fieldset>
+
+                <fieldset>
+                    <legend>Simulación Solar</legend>
+                    <label for="input-sun-time">Hora del Día: <strong id="val-sun-time">12:00</strong> hrs</label>
+                    <input type="range" id="input-sun-time" min="6" max="18" step="0.1" value="12">
+                </fieldset>
+
+                <fieldset>
+                    <legend>Topografía y Costos</legend>
+                    <label for="input-elevation">Cota $h$ (m.s.n.m.):</label>
+                    <input type="number" id="input-elevation" value="120.50" step="0.01">
+
+                    <label for="input-cut-volume">Volumen Corte $V_c$ ($m^3$):</label>
+                    <input type="number" id="input-cut-volume" value="85.4" step="0.1" min="0">
+
+                    <label for="input-val-m2">Valor $m^2$ ($):</label>
+                    <input type="number" id="input-val-m2" value="450" step="1">
+
+                    <label for="input-val-m3">Valor Corte $m^3$ ($):</label>
+                    <input type="number" id="input-val-m3" value="35" step="1">
+
+                    <label for="input-fixed-costs">Costos Fijos ($):</label>
+                    <input type="number" id="input-fixed-costs" value="12000" step="100">
+                </fieldset>
+            </form>
+
+            <section class="results-panel">
+                <h3>Métricas Calculadas</h3>
+                <div class="metric-card">
+                    <span class="label">Área $A(x)$:</span>
+                    <span class="value" id="display-area">0.00</span> $m^2$
+                </div>
+                <div class="metric-card">
+                    <span class="label">Área Máx (Vértice):</span>
+                    <span class="value" id="display-max-area">0.00</span> $m^2$
+                </div>
+                <div class="metric-card">
+                    <span class="label">Cota Terreno:</span>
+                    <span class="value" id="display-elevation">0.00</span> m
+                </div>
+                <div class="metric-card">
+                    <span class="label">Volumen Corte:</span>
+                    <span class="value" id="display-volume">0.00</span> $m^3$
+                </div>
+                <div class="metric-card highlight">
+                    <span class="label">Costo Total $C(A)$:</span>
+                    <span class="value">$<span id="display-cost">0.00</span></span>
+                </div>
+            </section>
+
+            <section class="chart-section">
+                <h3>Curva Área $A(x) = -x^2 + b\cdot x$</h3>
+                <canvas id="parabola-canvas" width="330" height="180"></canvas>
+            </section>
+        </aside>
+    </div>
+
+    <script type="module" src="main.js"></script>
+</body>
+</html>
