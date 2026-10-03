@@ -44,7 +44,7 @@ class App3D {
 
     renderTerrain(widthX, lengthY, slope) {
         while(this.terrainGroup.children.length > 0) { 
-            this.terrainGroup.remove(this.terrainGroup.children); 
+            this.terrainGroup.remove(this.terrainGroup.children[0]); 
         }
 
         const geom = new THREE.PlaneGeometry(widthX + 20, lengthY + 20, 20, 20);
@@ -74,7 +74,7 @@ class App3D {
 
     renderPoligonal(widthX, lengthY) {
         while(this.cartesianGroup.children.length > 0) {
-            this.cartesianGroup.remove(this.cartesianGroup.children);
+            this.cartesianGroup.remove(this.cartesianGroup.children[0]);
         }
 
         const points = [
@@ -101,7 +101,7 @@ class App3D {
 
     renderBuilding(widthX, lengthY, floorHeight, numFloors) {
         while(this.buildingGroup.children.length > 0) {
-            this.buildingGroup.remove(this.buildingGroup.children);
+            this.buildingGroup.remove(this.buildingGroup.children[0]);
         }
 
         if (numFloors <= 0) return;
