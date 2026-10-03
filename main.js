@@ -1,44 +1,28 @@
-/**
- * Orquestador Principal de la Aplicación
- * Manejo de Eventos UI, Navegación por Fases y Sincronización Gráfica
- */
-
 let app3d;
 let chart2d;
 let currentStep = 1;
 let numFloors = 1;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Inicializar Visor 3D
     app3d = new App3D('canvas-3d-container');
-
-    // Inicializar Gráfica 2D
     initChart2D();
-
-    // Configurar Event Listeners de Sliders e Inputs
     setupEventListeners();
-
-    // Actualizar Estado Inicial
     updateAll();
 });
 
-// Navegación por Fases del Wizard
 function goToStep(step) {
     currentStep = step;
 
-    // Actualizar Botones de la Barra Superior
     document.querySelectorAll('.step-btn').forEach(btn => {
         const bStep = parseInt(btn.getAttribute('data-step'));
         btn.classList.toggle('active', bStep === step);
     });
 
-    // Actualizar Visibilidad de Paneles Laterales
     document.querySelectorAll('.phase-panel').forEach(panel => {
         panel.classList.add('hidden');
     });
     document.getElementById(`phase-${step}`).classList.remove('hidden');
 
-    // Actualizar Etiqueta del Visor 3D
     const tags = [
         "Visor 3D: Fase 1 - Terreno y Levantamiento Topográfico",
         "Visor 3D: Fase 2 - Delimitación y Área de Lote A(x)",
@@ -73,7 +57,6 @@ function setupEventListeners() {
 }
 
 function updateAll() {
-    // 1. Obtener Valores de la UI
     const cotaH = parseFloat(document.getElementById('cota-h').value) || 2500;
     const topoX = parseFloat(document.getElementById('topo-x').value);
     const topoY = parseFloat(document.getElementById('topo-y').value);
@@ -89,14 +72,12 @@ function updateAll() {
     const costoM3 = parseFloat(document.getElementById('costo-m3').value);
     const costoFijo = parseFloat(document.getElementById('costo-fijo').value);
 
-    // Actualizar etiquetas de Sliders
     document.getElementById('topo-x-val').innerText = `${topoX.toFixed(2)} m`;
     document.getElementById('topo-y-val').innerText = `${topoY.toFixed(2)} m`;
     document.getElementById('lote-x-val').innerText = `${loteX.toFixed(2)} m`;
     document.getElementById('lote-b-val').innerText = `${loteB.toFixed(2)} m`;
     document.getElementById('hora-sol-val').innerText = `${Math.floor(horaSol)}:${(horaSol % 1 * 60).toString().padStart(2, '0')} hrs`;
 
-    // 2. Cálculos Matemáticos
     const topoArea = MathEngine.round(topoX * topoY);
     const topoVc = MathEngine.calculateExcavationVolume(topoArea, pendiente);
 
@@ -128,7 +109,6 @@ function updateAll() {
     document.getElementById('costo-corte').innerText = costos.costoCorte.toLocaleString('es-CO');
     document.getElementById('costo-total').innerText = costos.total.toLocaleString('es-CO');
 
-    // 3. Actualizar Resumen Fase 5
     document.getElementById('sum-cota').innerText = `${cotaH} m.s.n.m.`;
     document.getElementById('sum-vertices').innerText = `(0,0), (${topoX},0), (${topoX},${topoY}), (0,${topoY})`;
     document.getElementById('sum-vc').innerText = `${topoVc.toFixed(2)} m³`;
@@ -138,19 +118,16 @@ function updateAll() {
     document.getElementById('sum-pisos').innerText = `${numFloors} Piso(s) (${alturaTotal.toFixed(2)} m)`;
     document.getElementById('sum-presupuesto').innerText = `$${costos.total.toLocaleString('es-CO')}`;
 
-    // 4. Actualizar Renderizado 3D
     app3d.renderTerrain(topoX, topoY, pendiente);
     app3d.renderPoligonal(topoX, topoY);
 
     if (currentStep >= 3) {
         app3d.renderBuilding(loteX, loteYCalc, pisoAltura, numFloors);
     } else {
-        app3d.renderBuilding(loteX, loteYCalc, pisoAltura, 0); // Ocultar edificio en fases 1 y 2
+        app3d.renderBuilding(loteX, loteYCalc, pisoAltura, 0);
     }
 
     app3d.updateSunPosition(horaSol);
-
-    // 5. Actualizar Gráfica 2D
     updateChart2D(currentStep, topoX, topoY, loteB, loteX);
 }
 
@@ -158,9 +135,7 @@ function initChart2D() {
     const ctx = document.getElementById('chart-2d').getContext('2d');
     chart2d = new Chart(ctx, {
         type: 'line',
-        data: {
-            datasets: []
-        },
+        data: { datasets: [] },
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -177,9 +152,7 @@ function initChart2D() {
                     ticks: { color: '#f8fafc' }
                 }
             },
-            plugins: {
-                legend: { labels: { color: '#f8fafc' } }
-            }
+            plugins: { legend: { labels: { color: '#f8fafc' } } }
         }
     });
 }
