@@ -1,111 +1,163 @@
 /**
- * app3d.js - Fase 2: Visualización Topográfica y Edificación Dinámica
- * Dependencias: Three.js, OrbitControls (vía CDN)
+ * Motor Gráfico 3D con Three.js
+ * Visualización de Terreno Topográfico, Poligonal y Edificación Progresiva
  */
-
-import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
-import { OrbitControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/OrbitControls.js';
-
-class UrbanSimulator3D {
+class App3D {
     constructor(containerId) {
         this.container = document.getElementById(containerId);
-        this.init();
-        this.createTerrain();
-        this.createPlotAndBuilding();
-        this.setupLights();
-        this.animate();
-        
-        window.addEventListener('resize', () => this.onWindowResize());
-    }
-
-    init() {
-        // Escena y Cámara
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x0a0e17);
+        this.scene.background = new THREE.Color(0x0f172a);
 
-        this.camera = new THREE.PerspectiveCamera(75, this.container.clientWidth / this.container.clientHeight, 0.1, 1000);
-        this.camera.position.set(20, 20, 20);
+        // Cámara
+        this.camera = new THREE.PerspectiveCamera(45, this.container.clientWidth / this.container.clientHeight, 0.1, 1000);
+        this.camera.position.set(45, 35, 55);
 
-        // Renderer
+        // Renderizador
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.container.appendChild(this.renderer.domElement);
 
-        // Controles
-        this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+        // Controles de Órbita
+        this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
         this.controls.enableDamping = true;
-    }
 
-    createTerrain() {
-        const segments = 64;
-        const geometry = new THREE.PlaneGeometry(40, 40, segments, segments);
-        const material = new THREE.MeshPhongMaterial({ 
-            color: 0x2e3d52, 
-            wireframe: false, 
-            flatShading: false,
-            side: THREE.DoubleSide 
-        });
+        // Iluminación
+        this.setupLights();
 
-        // Modificación de vértices (Simulación de relieve decimal)
-        const positions = geometry.attributes.position.array;
-        for (let i = 0; i < positions.length; i += 3) {
-            const x = positions[i];
-            const y = positions[i + 1];
-            // Función matemática de relieve: z = sin(x/4) * cos(y/4) * 2
-            positions[i + 2] = Math.sin(x / 4) * Math.cos(y / 4) * 2.5;
-        }
-        geometry.computeVertexNormals();
+        // Grupos de Objetos 3D
+        this.terrainGroup = new THREE.Group();
+        this.cartesianGroup = new THREE.Group();
+        this.buildingGroup = new THREE.Group();
 
-        this.terrain = new THREE.Mesh(geometry, material);
-        this.terrain.rotation.x = -Math.PI / 2; // Orientar plano horizontalmente
-        this.terrain.receiveShadow = true;
-        this.scene.add(this.terrain);
-    }
+        this.scene.add(this.terrainGroup);
+        this.scene.add(this.cartesianGroup);
+        this.scene.add(this.buildingGroup);
 
-    createPlotAndBuilding() {
-        // Lote (Plano sobre terreno)
-        const plotGeo = new THREE.PlaneGeometry(10, 10);
-        const plotMat = new THREE.MeshBasicMaterial({ color: 0x00e676, transparent: true, opacity: 0.3 });
-        this.plot = new THREE.Mesh(plotGeo, plotMat);
-        this.plot.rotation.x = -Math.PI / 2;
-        this.plot.position.y = 2.6; // Ajuste según elevación máx del terreno
-        this.scene.add(this.plot);
+        // Ajuste de ventana
+        window.addEventListener('resize', () => this.onWindowResize());
 
-        // Edificación (Prisma Dinámico)
-        const buildGeo = new THREE.BoxGeometry(1, 1, 1);
-        const buildMat = new THREE.MeshStandardMaterial({ color: 0xdeff9a });
-        this.building = new THREE.Mesh(buildGeo, buildMat);
-        this.building.castShadow = true;
-        this.building.position.y = 3.5; 
-        this.scene.add(this.building);
+        // Iniciar Bucle de Animación
+        this.animate();
     }
 
     setupLights() {
-        const ambient = new THREE.AmbientLight(0xffffff, 0.4);
-        this.scene.add(ambient);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        this.scene.add(ambientLight);
 
-        // Luz Solar (Direccional con sombras)
-        this.sun = new THREE.DirectionalLight(0xffffff, 1.2);
-        this.sun.position.set(10, 20, 10);
-        this.sun.castShadow = true;
-        
-        // Ajuste de cámara de sombras para el terreno
-        this.sun.shadow.camera.left = -20;
-        this.sun.shadow.camera.right = 20;
-        this.sun.shadow.camera.top = 20;
-        this.sun.shadow.camera.bottom = -20;
-        this.sun.shadow.mapSize.width = 2048;
-        this.sun.shadow.mapSize.height = 2048;
-
-        this.scene.add(this.sun);
+        this.sunLight = new THREE.DirectionalLight(0xfff5e6, 1.2);
+        this.sunLight.position.set(30, 40, 20);
+        this.sunLight.castShadow = true;
+        this.sunLight.shadow.mapSize.width = 1024;
+        this.sunLight.shadow.mapSize.height = 1024;
+        this.scene.add(this.sunLight);
     }
 
-    // Método dinámico para actualizar dimensiones desde el motor JS
-    updateBuilding(width, depth, height) {
-        this.building.scale.set(width, height, depth);
-        this.building.position.y = 2.6 + (height / 2);
+    // Renderizar Terreno Topográfico (Fase 1)
+    renderTerrain(widthX, lengthY, slope) {
+        while(this.terrainGroup.children.length > 0) { 
+            this.terrainGroup.remove(this.terrainGroup.children[0]); 
+        }
+
+        const geom = new THREE.PlaneGeometry(widthX + 20, lengthY + 20, 20, 20);
+        geom.rotateX(-Math.PI / 2);
+
+        // Deformación ligera por pendiente
+        const pos = geom.attributes.position;
+        for (let i = 0; i < pos.count; i++) {
+            const z = pos.getZ(i);
+            pos.setY(i, (z / 10) * (slope / 10));
+        }
+        geom.computeVertexNormals();
+
+        const mat = new THREE.MeshStandardMaterial({
+            color: 0x1e293b,
+            wireframe: false,
+            roughness: 0.8
+        });
+
+        const terrainMesh = new THREE.Mesh(geom, mat);
+        terrainMesh.receiveShadow = true;
+        this.terrainGroup.add(terrainMesh);
+
+        // Malla Grid
+        const grid = new THREE.GridHelper(Math.max(widthX, lengthY) + 30, 20, 0x38bdf8, 0x334155);
+        grid.position.y = 0.05;
+        this.terrainGroup.add(grid);
+    }
+
+    // Renderizar Estaciones Topográficas y Poligonal 2D/3D (Fase 1)
+    renderPoligonal(widthX, lengthY) {
+        while(this.cartesianGroup.children.length > 0) {
+            this.cartesianGroup.remove(this.cartesianGroup.children[0]);
+        }
+
+        const points = [
+            new THREE.Vector3(-widthX/2, 0.2, -lengthY/2),
+            new THREE.Vector3(widthX/2, 0.2, -lengthY/2),
+            new THREE.Vector3(widthX/2, 0.2, lengthY/2),
+            new THREE.Vector3(-widthX/2, 0.2, lengthY/2),
+            new THREE.Vector3(-widthX/2, 0.2, -lengthY/2)
+        ];
+
+        const lineGeom = new THREE.BufferGeometry().setFromPoints(points);
+        const lineMat = new THREE.LineBasicMaterial({ color: 0x10b981, linewidth: 3 });
+        const line = new THREE.Line(lineGeom, lineMat);
+        this.cartesianGroup.add(line);
+
+        // Esferas de Puntos de Control Topográfico
+        points.slice(0, 4).forEach((p) => {
+            const sphereGeom = new THREE.SphereGeometry(0.6, 16, 16);
+            const sphereMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+            const sphere = new THREE.Mesh(sphereGeom, sphereMat);
+            sphere.position.copy(p);
+            this.cartesianGroup.add(sphere);
+        });
+    }
+
+    // Renderizar Edificio Piso por Piso (Fase 3)
+    renderBuilding(widthX, lengthY, floorHeight, numFloors) {
+        while(this.buildingGroup.children.length > 0) {
+            this.buildingGroup.remove(this.buildingGroup.children[0]);
+        }
+
+        if (numFloors <= 0) return;
+
+        for (let i = 0; i < numFloors; i++) {
+            const yPos = (i * floorHeight) + (floorHeight / 2) + 0.1;
+
+            // Losa del Piso
+            const slabGeom = new THREE.BoxGeometry(widthX, floorHeight * 0.9, lengthY);
+            const slabMat = new THREE.MeshStandardMaterial({
+                color: 0x0284c7,
+                transparent: true,
+                opacity: 0.85,
+                roughness: 0.3
+            });
+
+            const slab = new THREE.Mesh(slabGeom, slabMat);
+            slab.position.set(0, yPos, 0);
+            slab.castShadow = true;
+            slab.receiveShadow = true;
+            this.buildingGroup.add(slab);
+
+            // Borde estructural
+            const edges = new THREE.EdgesGeometry(slabGeom);
+            const lineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8 });
+            const wireframe = new THREE.LineSegments(edges, lineMat);
+            wireframe.position.set(0, yPos, 0);
+            this.buildingGroup.add(wireframe);
+        }
+    }
+
+    // Actualizar Posición Solar (Fase 4)
+    updateSunPosition(hour) {
+        const angle = ((hour - 6) / 12) * Math.PI; // De 6:00 a 18:00
+        const posX = 50 * Math.cos(angle);
+        const posY = 50 * Math.sin(angle);
+
+        this.sunLight.position.set(posX, Math.max(2, posY), 20);
     }
 
     onWindowResize() {
@@ -117,15 +169,6 @@ class UrbanSimulator3D {
     animate() {
         requestAnimationFrame(() => this.animate());
         this.controls.update();
-        
-        // Simulación de rotación solar suave
-        const time = Date.now() * 0.0005;
-        this.sun.position.x = Math.cos(time) * 20;
-        this.sun.position.z = Math.sin(time) * 20;
-
         this.renderer.render(this.scene, this.camera);
     }
 }
-
-// Inicialización
-const app3d = new UrbanSimulator3D('canvas-container');

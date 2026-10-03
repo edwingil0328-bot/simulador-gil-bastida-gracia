@@ -3,95 +3,225 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador de Urbanismo Inteligente - Fase 3</title>
+    <title>Simulador Topográfico y Arquitectónico 3D - Proyecto Final</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- Three.js y Chart.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div id="app-container">
-        <main id="canvas-container">
-            <div class="canvas-overlay">
-                <span>Capa Activa: Viewport 3D & Asoleamiento Sincronizado</span>
+    <header class="app-header">
+        <div class="logo-title">
+            <span class="icon">📐</span>
+            <div>
+                <h1>Simulador Topográfico & Arquitectónico 3D</h1>
+                <p class="subtitle">Álgebra, Geometría Analítica & Lev. Topográfico</p>
             </div>
-        </main>
+        </div>
+        <div class="team-badge">
+            <span id="team-names">Pérez · Gómez · Rodríguez</span>
+        </div>
+    </header>
 
-        <aside id="sidebar">
-            <header class="sidebar-header">
-                <h2>Controles Urbanísticos</h2>
-            </header>
+    <!-- Barra de Secuencia Guiada por Fases (Wizard) -->
+    <nav class="wizard-bar">
+        <button class="step-btn active" data-step="1" onclick="goToStep(1)">
+            <span class="step-num">1</span> 📍 Topografía
+        </button>
+        <button class="step-btn" data-step="2" onclick="goToStep(2)">
+            <span class="step-num">2</span> 📐 Lote A(x)
+        </button>
+        <button class="step-btn" data-step="3" onclick="goToStep(3)">
+            <span class="step-num">3</span> 🏗️ Edificación
+        </button>
+        <button class="step-btn" data-step="4" onclick="goToStep(4)">
+            <span class="step-num">4</span> ☀️ Sol & Costos
+        </button>
+        <button class="step-btn" data-step="5" onclick="goToStep(5)">
+            <span class="step-num">5</span> 📄 Ficha Técnica
+        </button>
+    </nav>
 
-            <form id="simulator-form" class="control-group">
-                <fieldset>
-                    <legend>Geometría y Edificación</legend>
-                    
-                    <label for="input-x">Ancho de Lote $x$: <strong id="val-x">15.00</strong> m</label>
-                    <input type="range" id="input-x" min="5" max="35" step="0.1" value="15">
-
-                    <label for="input-b">Límite Contorno $b$: <strong id="val-b">50.00</strong> m</label>
-                    <input type="number" id="input-b" value="50" step="0.1" min="10">
-
-                    <label for="input-floor-height">Altura Entrepiso: <strong id="val-floor-height">3.00</strong> m</label>
-                    <input type="range" id="input-floor-height" min="2.60" max="3.50" step="0.05" value="3.00">
-
-                    <label for="input-floors">Número de Pisos: <strong id="val-floors">4</strong></label>
-                    <input type="range" id="input-floors" min="1" max="10" step="1" value="4">
-                </fieldset>
-
-                <fieldset>
-                    <legend>Simulación Solar</legend>
-                    <label for="input-sun-time">Hora del Día: <strong id="val-sun-time">12:00</strong> hrs</label>
-                    <input type="range" id="input-sun-time" min="6" max="18" step="0.1" value="12">
-                </fieldset>
-
-                <fieldset>
-                    <legend>Topografía y Costos</legend>
-                    <label for="input-elevation">Cota $h$ (m.s.n.m.):</label>
-                    <input type="number" id="input-elevation" value="120.50" step="0.01">
-
-                    <label for="input-cut-volume">Volumen Corte $V_c$ ($m^3$):</label>
-                    <input type="number" id="input-cut-volume" value="85.4" step="0.1" min="0">
-
-                    <label for="input-val-m2">Valor $m^2$ ($):</label>
-                    <input type="number" id="input-val-m2" value="450" step="1">
-
-                    <label for="input-val-m3">Valor Corte $m^3$ ($):</label>
-                    <input type="number" id="input-val-m3" value="35" step="1">
-
-                    <label for="input-fixed-costs">Costos Fijos ($):</label>
-                    <input type="number" id="input-fixed-costs" value="12000" step="100">
-                </fieldset>
-            </form>
-
-            <section class="results-panel">
-                <h3>Métricas Calculadas</h3>
-                <div class="metric-card">
-                    <span class="label">Área $A(x)$:</span>
-                    <span class="value" id="display-area">0.00</span> $m^2$
+    <main class="main-layout">
+        <!-- Panel de Control Lateral -->
+        <aside class="sidebar">
+            
+            <!-- FASE 1: LEVANTAMIENTO TOPOGRÁFICO -->
+            <section class="panel-card phase-panel" id="phase-1">
+                <h2>📍 Fase 1: Levantamiento Topográfico</h2>
+                <p class="phase-desc">Defina las coordenadas de la poligonal en el plano cartesiano y la altimetría del terreno.</p>
+                
+                <div class="input-group">
+                    <label>Cota de Estación h (m.s.n.m.):</label>
+                    <input type="number" id="cota-h" value="2500" step="0.5">
                 </div>
-                <div class="metric-card">
-                    <span class="label">Área Máx (Vértice):</span>
-                    <span class="value" id="display-max-area">0.00</span> $m^2$
+
+                <div class="input-group">
+                    <label>Ancho Terreno X (m):</label>
+                    <input type="range" id="topo-x" min="10" max="60" value="30" step="0.5">
+                    <span class="slider-val" id="topo-x-val">30.00 m</span>
                 </div>
-                <div class="metric-card">
-                    <span class="label">Cota Terreno:</span>
-                    <span class="value" id="display-elevation">0.00</span> m
+
+                <div class="input-group">
+                    <label>Largo Terreno Y (m):</label>
+                    <input type="range" id="topo-y" min="10" max="60" value="20" step="0.5">
+                    <span class="slider-val" id="topo-y-val">20.00 m</span>
                 </div>
-                <div class="metric-card">
-                    <span class="label">Volumen Corte:</span>
-                    <span class="value" id="display-volume">0.00</span> $m^3$
+
+                <div class="input-group">
+                    <label>Pendiente Estimada (%):</label>
+                    <input type="number" id="pendiente" value="5" min="0" max="30" step="0.5">
                 </div>
-                <div class="metric-card highlight">
-                    <span class="label">Costo Total $C(A)$:</span>
-                    <span class="value">$<span id="display-cost">0.00</span></span>
+
+                <div class="kpi-box">
+                    <div><strong>Área Poligonal:</strong> <span id="topo-area">600.00</span> m²</div>
+                    <div><strong>Volumen Corte (Vc):</strong> <span id="topo-vc">60.00</span> m³</div>
+                </div>
+
+                <button class="btn-next" onclick="goToStep(2)">Continuar a Geometría de Lote ➔</button>
+            </section>
+
+            <!-- FASE 2: GEOMETRÍA DEL LOTE -->
+            <section class="panel-card phase-panel hidden" id="phase-2">
+                <h2>📐 Fase 2: Geometría Analítica y Parábola</h2>
+                <p class="phase-desc">Ajuste el ancho x para evaluar el modelo cuadrático A(x) = -x² + b·x.</p>
+
+                <div class="input-group">
+                    <label>Ancho Lote x (m):</label>
+                    <input type="range" id="lote-x" min="5" max="45" value="20" step="0.25">
+                    <span class="slider-val" id="lote-x-val">20.00 m</span>
+                </div>
+
+                <div class="input-group">
+                    <label>Límite Perímetro b (m):</label>
+                    <input type="range" id="lote-b" min="30" max="80" value="50" step="1">
+                    <span class="slider-val" id="lote-b-val">50.00 m</span>
+                </div>
+
+                <div class="kpi-box highlight">
+                    <div><strong>Largo Calculado (y = b - x):</strong> <span id="lote-y-calc">30.00</span> m</div>
+                    <div><strong>Área Actual A(x):</strong> <span id="lote-area-calc">600.00</span> m²</div>
+                    <div><strong>Vértice Óptimo (xv = b/2):</strong> <span id="lote-xv">25.00</span> m</div>
+                    <div><strong>Área Máxima (Amax):</strong> <span id="lote-amax">625.00</span> m²</div>
+                    <div><strong>Eficiencia Terreno:</strong> <span id="lote-eficiencia">96.00</span> %</div>
+                </div>
+
+                <div class="btn-row">
+                    <button class="btn-prev" onclick="goToStep(1)">← Atrás</button>
+                    <button class="btn-next" onclick="goToStep(3)">Ir a Edificación ➔</button>
                 </div>
             </section>
 
-            <section class="chart-section">
-                <h3>Curva Área $A(x) = -x^2 + b\cdot x$</h3>
-                <canvas id="parabola-canvas" width="330" height="180"></canvas>
+            <!-- FASE 3: EDIFICACIÓN PISO A PISO -->
+            <section class="panel-card phase-panel hidden" id="phase-3">
+                <h2>🏗️ Fase 3: Edificación Progresiva</h2>
+                <p class="phase-desc">Construya la estructura losa por losa controlando alturas con decimales.</p>
+
+                <div class="input-group">
+                    <label>Altura Entrepiso (m):</label>
+                    <input type="number" id="piso-altura" value="2.85" step="0.05" min="2.20" max="4.50">
+                </div>
+
+                <div class="floor-controls">
+                    <label>Número de Pisos:</label>
+                    <div class="counter-box">
+                        <button class="btn-counter" onclick="changeFloors(-1)">-</button>
+                        <span id="num-pisos-display">1</span>
+                        <button class="btn-counter" onclick="changeFloors(1)">+</button>
+                    </div>
+                </div>
+
+                <div class="kpi-box">
+                    <div><strong>Altura Total Edificio:</strong> <span id="altura-total">2.85</span> m</div>
+                    <div><strong>Área Construida Total:</strong> <span id="area-construida">600.00</span> m²</div>
+                    <div><strong>Volumen Edificado:</strong> <span id="volumen-construido">1710.00</span> m³</div>
+                </div>
+
+                <div class="btn-row">
+                    <button class="btn-prev" onclick="goToStep(2)">← Atrás</button>
+                    <button class="btn-next" onclick="goToStep(4)">Ir a Sol & Costos ➔</button>
+                </div>
             </section>
+
+            <!-- FASE 4: SIMULACIÓN SOLAR Y PRESUPUESTO -->
+            <section class="panel-card phase-panel hidden" id="phase-4">
+                <h2>☀️ Fase 4: Sol y Modelo de Costos</h2>
+                <p class="phase-desc">Evalúe el impacto bioclimático y la ecuación lineal de presupuesto.</p>
+
+                <div class="input-group">
+                    <label>Hora del Día (Sombra):</label>
+                    <input type="range" id="hora-sol" min="6" max="18" value="12" step="0.5">
+                    <span class="slider-val" id="hora-sol-val">12:00 hrs</span>
+                </div>
+
+                <div class="input-group">
+                    <label>Valor m² Construcción ($):</label>
+                    <input type="number" id="costo-m2" value="1200" step="50">
+                </div>
+
+                <div class="input-group">
+                    <label>Valor m³ Corte Topográfico ($):</label>
+                    <input type="number" id="costo-m3" value="45" step="5">
+                </div>
+
+                <div class="input-group">
+                    <label>Costos Fijos ($):</label>
+                    <input type="number" id="costo-fijo" value="15000" step="1000">
+                </div>
+
+                <div class="kpi-box total-cost-box">
+                    <div><strong>Costo Construcción:</strong> $<span id="costo-const">720,000.00</span></div>
+                    <div><strong>Costo Mov. Tierras:</strong> $<span id="costo-corte">2,700.00</span></div>
+                    <div class="total-line"><strong>Costo Total C(A):</strong> $<span id="costo-total">737,700.00</span></div>
+                </div>
+
+                <div class="btn-row">
+                    <button class="btn-prev" onclick="goToStep(3)">← Atrás</button>
+                    <button class="btn-next" onclick="goToStep(5)">Ver Ficha Técnica ➔</button>
+                </div>
+            </section>
+
+            <!-- FASE 5: FICHA TÉCNICA Y SUSTENTACIÓN -->
+            <section class="panel-card phase-panel hidden" id="phase-5">
+                <h2>📄 Fase 5: Ficha Técnica Resumen</h2>
+                <p class="phase-desc">Consolidado matemático-topográfico listo para sustentación.</p>
+
+                <div class="summary-table-container">
+                    <table class="summary-table">
+                        <tr><th>Cota Base (h):</th><td id="sum-cota">2500 m.s.n.m.</td></tr>
+                        <tr><th>Vértices Poligonal:</th><td id="sum-vertices">(0,0), (30,0), (30,20), (0,20)</td></tr>
+                        <tr><th>Volumen Corte (Vc):</th><td id="sum-vc">60.00 m³</td></tr>
+                        <tr><th>Función Área:</th><td>A(x) = -x² + <span id="sum-b">50</span>·x</td></tr>
+                        <tr><th>Dimensiones Lote:</th><td id="sum-dims">20.00 m × 30.00 m</td></tr>
+                        <tr><th>Vértice Óptimo (xv):</th><td id="sum-xv">25.00 m (Amax = 625.00 m²)</td></tr>
+                        <tr><th>Niveles / Altura:</th><td id="sum-pisos">1 Piso (2.85 m)</td></tr>
+                        <tr><th>Presupuesto Total:</th><td id="sum-presupuesto" class="highlight-text">$737,700.00</td></tr>
+                    </table>
+                </div>
+
+                <button class="btn-prev" onclick="goToStep(4)">← Volver a Controles</button>
+            </section>
+
         </aside>
-    </div>
 
-    <script type="module" src="main.js"></script>
+        <!-- Área Principal de Visualización -->
+        <section class="viewport-container">
+            <!-- Canvas 3D Principal (Three.js) -->
+            <div id="canvas-3d-container">
+                <div class="viewport-overlay" id="viewport-tag">Visor 3D: Fase 1 - Terreno Topográfico</div>
+            </div>
+
+            <!-- Panel Gráfico 2D Secundario (Cartesiano / Parábola) -->
+            <div class="canvas-2d-box">
+                <h3 id="chart-title">Plano Cartesiano Topográfico (2D)</h3>
+                <canvas id="chart-2d"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <script src="mathEngine.js"></script>
+    <script src="app3d.js"></script>
+    <script src="main.js"></script>
 </body>
 </html>
