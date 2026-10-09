@@ -15,7 +15,7 @@
             <span class="icon">📐</span>
             <div>
                 <h1>Simulador Topográfico & Arquitectónico 3D</h1>
-                <p class="subtitle">Álgebra, Geometría Analítica & Lev. Topográfico</p>
+                <p class="subtitle">Álgebra, Geometría Analítica & Lev. Topográfico por Coordenadas</p>
             </div>
         </div>
         <div class="team-badge">
@@ -25,7 +25,7 @@
 
     <nav class="wizard-bar">
         <button class="step-btn active" data-step="1" onclick="goToStep(1)">
-            <span class="step-num">1</span> 📍 Topografía
+            <span class="step-num">1</span> 📍 Topografía (0-10 Puntos)
         </button>
         <button class="step-btn" data-step="2" onclick="goToStep(2)">
             <span class="step-num">2</span> 📐 Lote A(x)
@@ -44,28 +44,72 @@
     <main class="main-layout">
         <aside class="sidebar">
             <section class="panel-card phase-panel" id="phase-1">
-                <h2>📍 Fase 1: Levantamiento Topográfico</h2>
-                <p class="phase-desc">Defina las coordenadas de la poligonal en el plano cartesiano y la altimetría del terreno.</p>
+                <h2>📍 Fase 1: Levantamiento Topográfico y Poligonal</h2>
+                <p class="phase-desc">Ingrese coordenadas absolutas (Este, Norte, Cota) de 0 a 10 puntos de la libreta de campo.</p>
+                
                 <div class="input-group">
-                    <label>Cota de Estación h (m.s.n.m.):</label>
+                    <label>Punto de Referencia Delta (m.s.n.m.):</label>
                     <input type="number" id="cota-h" value="2500" step="0.5">
                 </div>
+
                 <div class="input-group">
-                    <label>Ancho Terreno X (m):</label>
-                    <input type="range" id="topo-x" min="10" max="60" value="30" step="0.5">
-                    <span class="slider-val" id="topo-x-val">30.00 m</span>
+                    <label>Número de Vértices Poligonal (0 a 10):</label>
+                    <select id="num-puntos" onchange="togglePuntosInput()">
+                        <option value="0">0 (Terreno Rectangular por defecto)</option>
+                        <option value="3">3 Puntos (Triangular)</option>
+                        <option value="4" selected>4 Puntos (Polígono Cuadrilátero)</option>
+                        <option value="5">5 Puntos (Pentágono)</option>
+                        <option value="6">6 Puntos (Hexágono)</option>
+                        <option value="7">7 Puntos (Polígono 7)</option>
+                        <option value="8">8 Puntos (Polígono 8)</option>
+                        <option value="9">9 Puntos (Polígono 9)</option>
+                        <option value="10">10 Puntos (Cartera de Campo Completa)</option>
+                    </select>
                 </div>
-                <div class="input-group">
-                    <label>Largo Terreno Y (m):</label>
-                    <input type="range" id="topo-y" min="10" max="60" value="20" step="0.5">
-                    <span class="slider-val" id="topo-y-val">20.00 m</span>
+
+                <!-- Botón rápido para cargar los 10 puntos reales de la clase -->
+                <button class="btn-preset" onclick="cargarCarteraRealClase()">
+                    📋 Cargar Cartera Real de Clase (10 Puntos)
+                </button>
+
+                <!-- Panel dinámico de controles: Rectángulo o Tabla de Puntos -->
+                <div id="rect-inputs">
+                    <div class="input-group">
+                        <label>Ancho Terreno X (m):</label>
+                        <input type="range" id="topo-x" min="10" max="60" value="30" step="0.5">
+                        <span class="slider-val" id="topo-x-val">30.00 m</span>
+                    </div>
+                    <div class="input-group">
+                        <label>Largo Terreno Y (m):</label>
+                        <input type="range" id="topo-y" min="10" max="60" value="20" step="0.5">
+                        <span class="slider-val" id="topo-y-val">20.00 m</span>
+                    </div>
+                    <div class="input-group">
+                        <label>Pendiente Directa (%):</label>
+                        <input type="number" id="pendiente" value="5" min="0" max="30" step="0.5">
+                    </div>
                 </div>
-                <div class="input-group">
-                    <label>Pendiente Estimada (%):</label>
-                    <input type="number" id="pendiente" value="5" min="0" max="30" step="0.5">
+
+                <!-- Tabla de Coordenadas Absolutas (1 a 10 Puntos) -->
+                <div id="poly-inputs" class="hidden">
+                    <div class="coords-table-header">
+                        <span>Punto</span><span>Este (E)</span><span>Norte (N)</span><span>Cota (Z)</span>
+                    </div>
+                    <div id="coords-list" class="coords-list"></div>
+                    <button class="btn-action" onclick="updateAll()">📍 Unir Puntos en Plano</button>
                 </div>
+
+                <!-- Secuencia Matemática de la Pendiente -->
+                <div class="math-seq-box">
+                    <div class="seq-title">📐 Secuencia Matemática de Pendiente:</div>
+                    <div class="seq-step">1. Diff Altura: ΔH = <span id="seq-deltah">1.50</span> m</div>
+                    <div class="seq-step">2. Dist. Horiz: Dh = <span id="seq-dh">30.00</span> m</div>
+                    <div class="seq-step highlight">3. Pendiente: % = (ΔH / Dh) × 100 = <strong id="seq-pend">5.00%</strong></div>
+                    <div class="seq-step">Clasificación: <span id="seq-tipo" class="badge">Moderado</span></div>
+                </div>
+
                 <div class="kpi-box">
-                    <div><strong>Área Poligonal:</strong> <span id="topo-area">600.00</span> m²</div>
+                    <div><strong>Área Poligonal (Gauss):</strong> <span id="topo-area">600.00</span> m²</div>
                     <div><strong>Volumen Corte (Vc):</strong> <span id="topo-vc">60.00</span> m³</div>
                 </div>
                 <button class="btn-next" onclick="goToStep(2)">Continuar a Geometría de Lote ➔</button>
@@ -161,6 +205,7 @@
                     <table class="summary-table">
                         <tr><th>Cota Base (h):</th><td id="sum-cota">2500 m.s.n.m.</td></tr>
                         <tr><th>Vértices Poligonal:</th><td id="sum-vertices">(0,0), (30,0), (30,20), (0,20)</td></tr>
+                        <tr><th>Pendiente Terreno:</th><td id="sum-pendiente">5.00% (Moderado)</td></tr>
                         <tr><th>Volumen Corte (Vc):</th><td id="sum-vc">60.00 m³</td></tr>
                         <tr><th>Función Área:</th><td>A(x) = -x² + <span id="sum-b">50</span>·x</td></tr>
                         <tr><th>Dimensiones Lote:</th><td id="sum-dims">20.00 m × 30.00 m</td></tr>

@@ -47,7 +47,7 @@ class App3D {
             this.terrainGroup.remove(this.terrainGroup.children[0]); 
         }
 
-        const geom = new THREE.PlaneGeometry(widthX + 20, lengthY + 20, 20, 20);
+        const geom = new THREE.PlaneGeometry(widthX + 30, lengthY + 30, 20, 20);
         geom.rotateX(-Math.PI / 2);
 
         const pos = geom.attributes.position;
@@ -67,31 +67,53 @@ class App3D {
         terrainMesh.receiveShadow = true;
         this.terrainGroup.add(terrainMesh);
 
-        const grid = new THREE.GridHelper(Math.max(widthX, lengthY) + 30, 20, 0x38bdf8, 0x334155);
+        const grid = new THREE.GridHelper(Math.max(widthX, lengthY) + 40, 20, 0x38bdf8, 0x334155);
         grid.position.y = 0.05;
         this.terrainGroup.add(grid);
     }
 
-    renderPoligonal(widthX, lengthY) {
+    renderPoligonalPuntos(puntos, widthX, lengthY) {
         while(this.cartesianGroup.children.length > 0) {
             this.cartesianGroup.remove(this.cartesianGroup.children[0]);
         }
 
-        const points = [
-            new THREE.Vector3(-widthX/2, 0.2, -lengthY/2),
-            new THREE.Vector3(widthX/2, 0.2, -lengthY/2),
-            new THREE.Vector3(widthX/2, 0.2, lengthY/2),
-            new THREE.Vector3(-widthX/2, 0.2, lengthY/2),
-            new THREE.Vector3(-widthX/2, 0.2, -lengthY/2)
-        ];
+        let threePoints = [];
 
-        const lineGeom = new THREE.BufferGeometry().setFromPoints(points);
+        if (!puntos || puntos.length < 3) {
+            threePoints = [
+                new THREE.Vector3(-widthX/2, 0.2, -lengthY/2),
+                new THREE.Vector3(widthX/2, 0.2, -lengthY/2),
+                new THREE.Vector3(widthX/2, 0.2, lengthY/2),
+                new THREE.Vector3(-widthX/2, 0.2, lengthY/2),
+                new THREE.Vector3(-widthX/2, 0.2, -lengthY/2)
+            ];
+        } else {
+            // Normalización al centro de la escena
+            const minE = Math.min(...puntos.map(p => p.E));
+            const maxE = Math.max(...puntos.map(p => p.E));
+            const minN = Math.min(...puntos.map(p => p.N));
+            const maxN = Math.max(...puntos.map(p => p.N));
+
+            const centerE = (minE + maxE) / 2;
+            const centerN = (minN + maxN) / 2;
+
+            puntos.forEach(p => {
+                const x3d = (p.E - centerE);
+                const z3d = (p.N - centerN);
+                const y3d = 0.2;
+                threePoints.push(new THREE.Vector3(x3d, y3d, z3d));
+            });
+            // Cerrar el polígono
+            threePoints.push(threePoints[0].clone());
+        }
+
+        const lineGeom = new THREE.BufferGeometry().setFromPoints(threePoints);
         const lineMat = new THREE.LineBasicMaterial({ color: 0x10b981, linewidth: 3 });
         const line = new THREE.Line(lineGeom, lineMat);
         this.cartesianGroup.add(line);
 
-        points.slice(0, 4).forEach((p) => {
-            const sphereGeom = new THREE.SphereGeometry(0.6, 16, 16);
+        threePoints.slice(0, threePoints.length - 1).forEach((p) => {
+            const sphereGeom = new THREE.SphereGeometry(0.7, 16, 16);
             const sphereMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
             const sphere = new THREE.Mesh(sphereGeom, sphereMat);
             sphere.position.copy(p);
