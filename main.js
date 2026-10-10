@@ -2,6 +2,7 @@ let app3d;
 let chart2d;
 let currentStep = 1;
 let numFloors = 1;
+let previousCotaH = 2500;
 
 // Coordenadas reales de la libreta de campo de la clase (10 puntos)
 const carteraClaseReal = [
@@ -61,6 +62,7 @@ function togglePuntosInput() {
     const rectInputs = document.getElementById('rect-inputs');
     const polyInputs = document.getElementById('poly-inputs');
     const coordsList = document.getElementById('coords-list');
+    const cotaH = parseFloat(document.getElementById('cota-h').value) || 2500;
 
     if (numPuntos === 0) {
         rectInputs.classList.remove('hidden');
@@ -71,18 +73,17 @@ function togglePuntosInput() {
         coordsList.innerHTML = '';
 
         for (let i = 1; i <= numPuntos; i++) {
-            // Valores por defecto generados en círculo o polígono simétrico si no es la cartera cargada
             const defaultE = MathEngine.round(100 + 15 * Math.cos((i * 2 * Math.PI) / numPuntos));
             const defaultN = MathEngine.round(100 + 15 * Math.sin((i * 2 * Math.PI) / numPuntos));
-            const defaultZ = MathEngine.round(2500 + (i * 0.2));
+            const defaultZ = MathEngine.round(cotaH + (i * 0.2));
 
             const row = document.createElement('div');
             row.className = 'coord-row';
             row.innerHTML = `
                 <label>P${i}:</label>
-                <input type="number" id="p-${i}-e" value="${defaultE}" step="0.1" onchange="updateAll()">
-                <input type="number" id="p-${i}-n" value="${defaultN}" step="0.1" onchange="updateAll()">
-                <input type="number" id="p-${i}-z" value="${defaultZ}" step="0.1" onchange="updateAll()">
+                <input type="number" id="p-${i}-e" value="${defaultE}" step="0.1" oninput="updateAll()" onchange="updateAll()">
+                <input type="number" id="p-${i}-n" value="${defaultN}" step="0.1" oninput="updateAll()" onchange="updateAll()">
+                <input type="number" id="p-${i}-z" value="${defaultZ}" step="0.1" oninput="updateAll()" onchange="updateAll()">
             `;
             coordsList.appendChild(row);
         }
@@ -93,6 +94,10 @@ function togglePuntosInput() {
 function cargarCarteraRealClase() {
     document.getElementById('num-puntos').value = "10";
     togglePuntosInput();
+
+    const baseZ = carteraClaseReal[0].Z;
+    document.getElementById('cota-h').value = Math.floor(baseZ);
+    previousCotaH = Math.floor(baseZ);
 
     carteraClaseReal.forEach((pt, idx) => {
         const i = idx + 1;
@@ -132,7 +137,7 @@ function getPuntosIngresados() {
 
 function setupEventListeners() {
     const inputs = [
-        'cota-h', 'topo-x', 'topo-y', 'pendiente',
+        'topo-x', 'topo-y', 'pendiente',
         'lote-x', 'lote-b', 'piso-altura',
         'hora-sol', 'costo-m2', 'costo-m3', 'costo-fijo'
     ];
@@ -143,6 +148,29 @@ function setupEventListeners() {
             elem.addEventListener('input', () => updateAll());
         }
     });
+
+    const cotaElem = document.getElementById('cota-h');
+    if (cotaElem) {
+        previousCotaH = parseFloat(cotaElem.value) || 2500;
+        
+        cotaElem.addEventListener('input', () => {
+            const newCotaH = parseFloat(cotaElem.value) || 2500;
+            const diff = newCotaH - previousCotaH;
+            
+            const numPuntos = parseInt(document.getElementById('num-puntos').value);
+            if (numPuntos > 0 && diff !== 0) {
+                for (let i = 1; i <= numPuntos; i++) {
+                    const elemZ = document.getElementById(`p-${i}-z`);
+                    if (elemZ) {
+                        const currentZ = parseFloat(elemZ.value) || 0;
+                        elemZ.value = MathEngine.round(currentZ + diff, 2);
+                    }
+                }
+            }
+            previousCotaH = newCotaH;
+            updateAll();
+        });
+    }
 }
 
 function updateAll() {
@@ -166,7 +194,6 @@ function updateAll() {
         topoArea = MathEngine.calculatePolygonArea(puntos);
         seqSlope = MathEngine.calculateSlopeSequence(puntos);
 
-        // Para escala equivalente
         topoX = MathEngine.round(seqSlope.deltaE || 30);
         topoY = MathEngine.round(seqSlope.deltaN || 20);
     }
@@ -289,7 +316,7 @@ function updateChart2D(step, numPuntos, puntos, topoX, topoY, b, xActual) {
             ];
         } else {
             datasetData = puntos.map(p => ({ x: p.E, y: p.N }));
-            datasetData.push({ x: puntos[0].E, y: puntos[0].N }); // Unir con el primer punto
+            datasetData.push({ x: puntos[0].E, y: puntos[0].N });
         }
 
         chart2d.data.datasets = [{
