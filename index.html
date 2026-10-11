@@ -43,6 +43,7 @@
 
     <main class="main-layout">
         <aside class="sidebar">
+            <!-- FASE 1: Topografía -->
             <section class="panel-card phase-panel" id="phase-1">
                 <h2>📍 Fase 1: Levantamiento Topográfico y Poligonal</h2>
                 <p class="phase-desc">Ingrese coordenadas absolutas (Este, Norte, Cota) de 0 a 10 puntos de la libreta de campo.</p>
@@ -67,12 +68,10 @@
                     </select>
                 </div>
 
-                <!-- Botón rápido para cargar los 10 puntos reales de la clase -->
                 <button class="btn-preset" onclick="cargarCarteraRealClase()">
                     📋 Cargar Cartera Real de Clase (10 Puntos)
                 </button>
 
-                <!-- Panel dinámico de controles: Rectángulo o Tabla de Puntos -->
                 <div id="rect-inputs">
                     <div class="input-group">
                         <label>Ancho Terreno X (m):</label>
@@ -90,7 +89,6 @@
                     </div>
                 </div>
 
-                <!-- Tabla de Coordenadas Absolutas (1 a 10 Puntos) -->
                 <div id="poly-inputs" class="hidden">
                     <div class="coords-table-header">
                         <span>Punto</span><span>Este (E)</span><span>Norte (N)</span><span>Cota (Z)</span>
@@ -99,7 +97,6 @@
                     <button class="btn-action" onclick="updateAll()">📍 Unir Puntos en Plano</button>
                 </div>
 
-                <!-- Secuencia Matemática de la Pendiente -->
                 <div class="math-seq-box">
                     <div class="seq-title">📐 Secuencia Matemática de Pendiente:</div>
                     <div class="seq-step">1. Diff Altura: ΔH = <span id="seq-deltah">1.50</span> m</div>
@@ -115,25 +112,33 @@
                 <button class="btn-next" onclick="goToStep(2)">Continuar a Geometría de Lote ➔</button>
             </section>
 
+            <!-- FASE 2: Geometría Analítica (Sliders Reordenados: Límite b primero, Ancho x segundo) -->
             <section class="panel-card phase-panel hidden" id="phase-2">
                 <h2>📐 Fase 2: Geometría Analítica y Parábola</h2>
-                <p class="phase-desc">Ajuste el ancho x para evaluar el modelo cuadrático A(x) = -x² + b·x.</p>
-                <div class="input-group">
-                    <label>Ancho Lote x (m):</label>
-                    <input type="range" id="lote-x" min="5" max="45" value="20" step="0.25">
-                    <span class="slider-val" id="lote-x-val">20.00 m</span>
-                </div>
-                <div class="input-group">
-                    <label>Límite Perímetro b (m):</label>
+                <p class="phase-desc">Fije primero la restricción perimetral b y luego varíe el ancho x para evaluar A(x) = -x² + b·x.</p>
+                
+                <!-- 1. Límite del Perímetro b PRIMERO -->
+                <div class="input-group highlight-input">
+                    <label><strong>1. Límite Perímetro b (m):</strong></label>
                     <input type="range" id="lote-b" min="30" max="80" value="50" step="1">
                     <span class="slider-val" id="lote-b-val">50.00 m</span>
                 </div>
+
+                <!-- 2. Ancho del Lote x SEGUNDO -->
+                <div class="input-group">
+                    <label>2. Ancho Lote x (m):</label>
+                    <input type="range" id="lote-x" min="5" max="50" value="20" step="0.25">
+                    <span class="slider-val" id="lote-x-val">20.00 m</span>
+                </div>
+
                 <div class="kpi-box highlight">
+                    <div><strong>Área Lote Bruto (Fase 1):</strong> <span id="lote-topo-ref">600.00 m²</span></div>
                     <div><strong>Largo Calculado (y = b - x):</strong> <span id="lote-y-calc">30.00</span> m</div>
-                    <div><strong>Área Actual A(x):</strong> <span id="lote-area-calc">600.00</span> m²</div>
+                    <div><strong>Área Edificio A(x):</strong> <span id="lote-area-calc">600.00</span> m²</div>
+                    <div><strong>Índice Ocupación (%):</strong> <span id="lote-ocupacion-badge" class="badge badge-success">100%</span></div>
                     <div><strong>Vértice Óptimo (xv = b/2):</strong> <span id="lote-xv">25.00</span> m</div>
-                    <div><strong>Área Máxima (Amax):</strong> <span id="lote-amax">625.00</span> m²</div>
-                    <div><strong>Eficiencia Terreno:</strong> <span id="lote-eficiencia">96.00</span> %</div>
+                    <div><strong>Área Máxima Parábola (Amax):</strong> <span id="lote-amax">625.00</span> m²</div>
+                    <div><strong>Eficiencia de Forma:</strong> <span id="lote-eficiencia">96.00</span> %</div>
                 </div>
                 <div class="btn-row">
                     <button class="btn-prev" onclick="goToStep(1)">← Atrás</button>
@@ -141,9 +146,10 @@
                 </div>
             </section>
 
+            <!-- FASE 3: Edificación -->
             <section class="panel-card phase-panel hidden" id="phase-3">
                 <h2>🏗️ Fase 3: Edificación Progresiva</h2>
-                <p class="phase-desc">Construya la estructura losa por losa controlando alturas con decimales.</p>
+                <p class="phase-desc">Construya la estructura losa por losa con ventanales arquitectónicos en 3D.</p>
                 <div class="input-group">
                     <label>Altura Entrepiso (m):</label>
                     <input type="number" id="piso-altura" value="2.85" step="0.05" min="2.20" max="4.50">
@@ -167,14 +173,24 @@
                 </div>
             </section>
 
+            <!-- FASE 4: Sol y Modelo de Costos con Semáforo Bioclimático -->
             <section class="panel-card phase-panel hidden" id="phase-4">
                 <h2>☀️ Fase 4: Sol y Modelo de Costos</h2>
-                <p class="phase-desc">Evalúe el impacto bioclimático y la ecuación lineal de presupuesto.</p>
+                <p class="phase-desc">Evalúe el impacto bioclimático solar y la ecuación financiera lineal.</p>
+                
                 <div class="input-group">
-                    <label>Hora del Día (Sombra):</label>
+                    <label>Hora del Día (Sombra 3D):</label>
                     <input type="range" id="hora-sol" min="6" max="18" value="12" step="0.5">
                     <span class="slider-val" id="hora-sol-val">12:00 hrs</span>
                 </div>
+
+                <!-- Tarjeta de Análisis Bioclimático (Semáforo Solar) -->
+                <div class="bioclimatic-card">
+                    <div class="card-title">☀️ Semáforo Bioclimático de Insolación:</div>
+                    <div id="solar-badge" class="badge-solar solar-green">🟢 Confort Térmico Templado</div>
+                    <p id="solar-desc" class="solar-desc">Radiación solar suave. Entorno fresco con iluminación natural.</p>
+                </div>
+
                 <div class="input-group">
                     <label>Valor m² Construcción ($):</label>
                     <input type="number" id="costo-m2" value="1200" step="50">
@@ -187,6 +203,7 @@
                     <label>Costos Fijos ($):</label>
                     <input type="number" id="costo-fijo" value="15000" step="1000">
                 </div>
+
                 <div class="kpi-box total-cost-box">
                     <div><strong>Costo Construcción:</strong> $<span id="costo-const">720,000.00</span></div>
                     <div><strong>Costo Mov. Tierras:</strong> $<span id="costo-corte">2,700.00</span></div>
@@ -198,9 +215,11 @@
                 </div>
             </section>
 
+            <!-- FASE 5: Ficha Técnica Consolidada con Botón PDF -->
             <section class="panel-card phase-panel hidden" id="phase-5">
                 <h2>📄 Fase 5: Ficha Técnica Resumen</h2>
-                <p class="phase-desc">Consolidado matemático-topográfico listo para sustentación.</p>
+                <p class="phase-desc">Consolidado matemático-topográfico oficial listo para exportar o sustentar.</p>
+                
                 <div class="summary-table-container">
                     <table class="summary-table">
                         <tr><th>Cota Base (h):</th><td id="sum-cota">2500 m.s.n.m.</td></tr>
@@ -210,11 +229,19 @@
                         <tr><th>Función Área:</th><td>A(x) = -x² + <span id="sum-b">50</span>·x</td></tr>
                         <tr><th>Dimensiones Lote:</th><td id="sum-dims">20.00 m × 30.00 m</td></tr>
                         <tr><th>Vértice Óptimo (xv):</th><td id="sum-xv">25.00 m (Amax = 625.00 m²)</td></tr>
+                        <tr><th>Índice Ocupación:</th><td id="sum-ocupacion">100.0% (600 m² / 600 m²)</td></tr>
                         <tr><th>Niveles / Altura:</th><td id="sum-pisos">1 Piso (2.85 m)</td></tr>
                         <tr><th>Presupuesto Total:</th><td id="sum-presupuesto" class="highlight-text">$737,700.00</td></tr>
                     </table>
                 </div>
-                <button class="btn-prev" onclick="goToStep(4)">← Volver a Controles</button>
+
+                <button class="btn-export-pdf" onclick="exportarPDF()">
+                    📥 Descargar PDF / Imprimir Ficha Técnica
+                </button>
+
+                <div class="btn-row mt-12">
+                    <button class="btn-prev" onclick="goToStep(4)">← Volver a Controles</button>
+                </div>
             </section>
         </aside>
 

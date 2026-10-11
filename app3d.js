@@ -21,20 +21,22 @@ class App3D {
         this.terrainGroup = new THREE.Group();
         this.cartesianGroup = new THREE.Group();
         this.buildingGroup = new THREE.Group();
+        this.vegetationGroup = new THREE.Group();
 
         this.scene.add(this.terrainGroup);
         this.scene.add(this.cartesianGroup);
         this.scene.add(this.buildingGroup);
+        this.scene.add(this.vegetationGroup);
 
         window.addEventListener('resize', () => this.onWindowResize());
         this.animate();
     }
 
     setupLights() {
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
         this.scene.add(ambientLight);
 
-        this.sunLight = new THREE.DirectionalLight(0xfff5e6, 1.2);
+        this.sunLight = new THREE.DirectionalLight(0xfff5e6, 1.25);
         this.sunLight.position.set(30, 40, 20);
         this.sunLight.castShadow = true;
         this.sunLight.shadow.mapSize.width = 1024;
@@ -46,8 +48,11 @@ class App3D {
         while(this.terrainGroup.children.length > 0) { 
             this.terrainGroup.remove(this.terrainGroup.children[0]); 
         }
+        while(this.vegetationGroup.children.length > 0) {
+            this.vegetationGroup.remove(this.vegetationGroup.children[0]);
+        }
 
-        const geom = new THREE.PlaneGeometry(widthX + 30, lengthY + 30, 20, 20);
+        const geom = new THREE.PlaneGeometry(widthX + 35, lengthY + 35, 20, 20);
         geom.rotateX(-Math.PI / 2);
 
         const pos = geom.attributes.position;
@@ -70,6 +75,58 @@ class App3D {
         const grid = new THREE.GridHelper(Math.max(widthX, lengthY) + 40, 20, 0x38bdf8, 0x334155);
         grid.position.y = 0.05;
         this.terrainGroup.add(grid);
+
+        // Árboles y vegetación circundante en el terreno
+        this.renderTrees(widthX, lengthY);
+    }
+
+    renderTrees(widthX, lengthY) {
+        const halfX = widthX / 2 + 8;
+        const halfY = lengthY / 2 + 8;
+
+        const treeCoords = [
+            { x: -halfX - 4, z: -halfY - 4 },
+            { x: halfX + 5, z: -halfY - 2 },
+            { x: -halfX - 2, z: halfY + 6 },
+            { x: halfX + 4, z: halfY + 4 },
+            { x: 0, z: -halfY - 8 },
+            { x: 0, z: halfY + 8 },
+            { x: -halfX - 8, z: 0 },
+            { x: halfX + 8, z: 0 }
+        ];
+
+        treeCoords.forEach(pos => {
+            const tree = this.createTree(pos.x, pos.z);
+            this.vegetationGroup.add(tree);
+        });
+    }
+
+    createTree(x, z) {
+        const treeGroup = new THREE.Group();
+        
+        // Tronco de madera
+        const trunkGeom = new THREE.CylinderGeometry(0.25, 0.4, 2.2, 8);
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.9 });
+        const trunk = new THREE.Mesh(trunkGeom, trunkMat);
+        trunk.position.y = 1.1;
+        trunk.castShadow = true;
+        treeGroup.add(trunk);
+
+        // Copa de árbol (dos conos superpuestos)
+        const foliageMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.5 });
+        
+        const foliage1 = new THREE.Mesh(new THREE.ConeGeometry(1.6, 2.8, 8), foliageMat);
+        foliage1.position.y = 3.0;
+        foliage1.castShadow = true;
+        treeGroup.add(foliage1);
+
+        const foliage2 = new THREE.Mesh(new THREE.ConeGeometry(1.2, 2.2, 8), foliageMat);
+        foliage2.position.y = 4.2;
+        foliage2.castShadow = true;
+        treeGroup.add(foliage2);
+
+        treeGroup.position.set(x, 0.1, z);
+        return treeGroup;
     }
 
     renderPoligonalPuntos(puntos, widthX, lengthY) {
@@ -88,7 +145,6 @@ class App3D {
                 new THREE.Vector3(-widthX/2, 0.2, -lengthY/2)
             ];
         } else {
-            // Normalización al centro de la escena
             const minE = Math.min(...puntos.map(p => p.E));
             const maxE = Math.max(...puntos.map(p => p.E));
             const minN = Math.min(...puntos.map(p => p.N));
@@ -103,7 +159,6 @@ class App3D {
                 const y3d = 0.2;
                 threePoints.push(new THREE.Vector3(x3d, y3d, z3d));
             });
-            // Cerrar el polígono
             threePoints.push(threePoints[0].clone());
         }
 
@@ -128,10 +183,21 @@ class App3D {
 
         if (numFloors <= 0) return;
 
+        const glassMat = new THREE.MeshStandardMaterial({
+            color: 0x38bdf8,
+            transparent: true,
+            opacity: 0.65,
+            roughness: 0.1,
+            metalness: 0.6
+        });
+
+        const frameMat = new THREE.LineBasicMaterial({ color: 0x0284c7 });
+
         for (let i = 0; i < numFloors; i++) {
             const yPos = (i * floorHeight) + (floorHeight / 2) + 0.1;
 
-            const slabGeom = new THREE.BoxGeometry(widthX, floorHeight * 0.9, lengthY);
+            // Cuerpo del nivel / Losa principal
+            const slabGeom = new THREE.BoxGeometry(widthX, floorHeight * 0.92, lengthY);
             const slabMat = new THREE.MeshStandardMaterial({
                 color: 0x0284c7,
                 transparent: true,
@@ -145,11 +211,18 @@ class App3D {
             slab.receiveShadow = true;
             this.buildingGroup.add(slab);
 
+            // Borde estructural/Líneas arquitectónicas
             const edges = new THREE.EdgesGeometry(slabGeom);
-            const lineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8 });
-            const wireframe = new THREE.LineSegments(edges, lineMat);
+            const wireframe = new THREE.LineSegments(edges, frameMat);
             wireframe.position.set(0, yPos, 0);
             this.buildingGroup.add(wireframe);
+
+            // Ventanales predeterminados de cristal por fachada
+            const winMargin = 0.05;
+            const glassBoxGeom = new THREE.BoxGeometry(widthX + winMargin, floorHeight * 0.6, lengthY + winMargin);
+            const glassBox = new THREE.Mesh(glassBoxGeom, glassMat);
+            glassBox.position.set(0, yPos, 0);
+            this.buildingGroup.add(glassBox);
         }
     }
 

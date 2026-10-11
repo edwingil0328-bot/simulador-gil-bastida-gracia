@@ -4,6 +4,14 @@ let currentStep = 1;
 let numFloors = 1;
 let previousCotaH = 2500;
 
+// Estado global sincronizado del proyecto
+const state = {
+    topoArea: 600.0,
+    slopePercentage: 5.0,
+    loteB: 50.0,
+    loteX: 20.0
+};
+
 // Coordenadas reales de la libreta de campo de la clase (10 puntos)
 const carteraClaseReal = [
     { name: 'P1', E: 113.88, N: 105.05, Z: 2501.20 },
@@ -138,14 +146,27 @@ function getPuntosIngresados() {
 function setupEventListeners() {
     const inputs = [
         'topo-x', 'topo-y', 'pendiente',
-        'lote-x', 'lote-b', 'piso-altura',
+        'lote-b', 'lote-x', 'piso-altura',
         'hora-sol', 'costo-m2', 'costo-m3', 'costo-fijo'
     ];
 
     inputs.forEach(id => {
         const elem = document.getElementById(id);
         if (elem) {
-            elem.addEventListener('input', () => updateAll());
+            elem.addEventListener('input', () => {
+                if (id === 'lote-b') {
+                    // Sincronizar el máximo del slider de ancho 'x' para que no supere 'b'
+                    const loteBVal = parseFloat(elem.value) || 50;
+                    const loteXElem = document.getElementById('lote-x');
+                    if (loteXElem) {
+                        loteXElem.max = loteBVal;
+                        if (parseFloat(loteXElem.value) > loteBVal) {
+                            loteXElem.value = loteBVal;
+                        }
+                    }
+                }
+                updateAll();
+            });
         }
     });
 
@@ -198,6 +219,9 @@ function updateAll() {
         topoY = MathEngine.round(seqSlope.deltaN || 20);
     }
 
+    state.topoArea = topoArea;
+    state.slopePercentage = seqSlope.pendiente;
+
     const topoVc = MathEngine.calculateExcavationVolume(topoArea, seqSlope.pendiente);
 
     // Actualizar Secuencia Matemática en Pantalla
@@ -209,8 +233,12 @@ function updateAll() {
     document.getElementById('topo-area').innerText = topoArea.toFixed(2);
     document.getElementById('topo-vc').innerText = topoVc.toFixed(2);
 
-    const loteX = parseFloat(document.getElementById('lote-x').value);
+    // FASE 2: Geometría Analítica y Parábola
     const loteB = parseFloat(document.getElementById('lote-b').value);
+    const loteX = parseFloat(document.getElementById('lote-x').value);
+
+    state.loteB = loteB;
+    state.loteX = loteX;
 
     const pisoAltura = parseFloat(document.getElementById('piso-altura').value);
     const horaSol = parseFloat(document.getElementById('hora-sol').value);
@@ -219,8 +247,8 @@ function updateAll() {
     const costoM3 = parseFloat(document.getElementById('costo-m3').value);
     const costoFijo = parseFloat(document.getElementById('costo-fijo').value);
 
-    document.getElementById('lote-x-val').innerText = `${loteX.toFixed(2)} m`;
     document.getElementById('lote-b-val').innerText = `${loteB.toFixed(2)} m`;
+    document.getElementById('lote-x-val').innerText = `${loteX.toFixed(2)} m`;
     document.getElementById('hora-sol-val').innerText = `${Math.floor(horaSol)}:${(horaSol % 1 * 60).toString().padStart(2, '0')} hrs`;
 
     const loteYCalc = MathEngine.round(Math.max(0, loteB - loteX));
@@ -228,12 +256,29 @@ function updateAll() {
     const vertex = MathEngine.calculateVertex(loteB);
     const eficiencia = MathEngine.calculateEfficiency(loteArea, vertex.amax);
 
+    // Sincronización e Índice de Ocupación con la Fase 1
+    const ocupacionPct = MathEngine.round((loteArea / (topoArea > 0 ? topoArea : 1)) * 100);
+    const ocupacionBadge = document.getElementById('lote-ocupacion-badge');
+    if (ocupacionBadge) {
+        if (ocupacionPct <= 100) {
+            ocupacionBadge.className = 'badge badge-success';
+            ocupacionBadge.innerText = `${ocupacionPct.toFixed(1)}% (Permitido ≤100%)`;
+        } else {
+            ocupacionBadge.className = 'badge badge-danger';
+            ocupacionBadge.innerText = `${ocupacionPct.toFixed(1)}% (🔴 Excede Lote Fase 1)`;
+        }
+    }
+
     document.getElementById('lote-y-calc').innerText = loteYCalc.toFixed(2);
     document.getElementById('lote-area-calc').innerText = loteArea.toFixed(2);
     document.getElementById('lote-xv').innerText = vertex.xv.toFixed(2);
     document.getElementById('lote-amax').innerText = vertex.amax.toFixed(2);
     document.getElementById('lote-eficiencia').innerText = eficiencia.toFixed(2);
+    if (document.getElementById('lote-topo-ref')) {
+        document.getElementById('lote-topo-ref').innerText = `${topoArea.toFixed(2)} m²`;
+    }
 
+    // FASE 3: Edificación
     const alturaTotal = MathEngine.round(numFloors * pisoAltura);
     const areaConstruidaTotal = MathEngine.round(loteArea * numFloors);
     const volumenConstruido = MathEngine.round(areaConstruidaTotal * pisoAltura);
@@ -242,15 +287,20 @@ function updateAll() {
     document.getElementById('area-construida').innerText = areaConstruidaTotal.toFixed(2);
     document.getElementById('volumen-construido').innerText = volumenConstruido.toFixed(2);
 
+    // FASE 4: Análisis Bioclimático / Semáforo Solar
+    updateSolarBioclimaticBadge(horaSol);
+
+    // FASE 4: Presupuesto y Costos
     const costos = MathEngine.calculateTotalCost(areaConstruidaTotal, costoM2, topoVc, costoM3, costoFijo);
 
     document.getElementById('costo-const').innerText = costos.costoConstruccion.toLocaleString('es-CO');
     document.getElementById('costo-corte').innerText = costos.costoCorte.toLocaleString('es-CO');
     document.getElementById('costo-total').innerText = costos.total.toLocaleString('es-CO');
 
+    // FASE 5: Consolidado Ficha Técnica
     document.getElementById('sum-cota').innerText = `${cotaH} m.s.n.m.`;
     if (numPuntos === 0) {
-        document.getElementById('sum-vertices').innerText = `(0,0), (${topoX},0), (${topoX},${topoY}), (0,${topoY})`;
+        document.getElementById('sum-vertices').innerText = `Rectángulo (${topoArea.toFixed(2)} m²)`;
     } else {
         document.getElementById('sum-vertices').innerText = `${numPuntos} Puntos Poligonales (${topoArea.toFixed(2)} m²)`;
     }
@@ -261,6 +311,9 @@ function updateAll() {
     document.getElementById('sum-xv').innerText = `${vertex.xv.toFixed(2)} m (Amax = ${vertex.amax.toFixed(2)} m²)`;
     document.getElementById('sum-pisos').innerText = `${numFloors} Piso(s) (${alturaTotal.toFixed(2)} m)`;
     document.getElementById('sum-presupuesto').innerText = `$${costos.total.toLocaleString('es-CO')}`;
+    if (document.getElementById('sum-ocupacion')) {
+        document.getElementById('sum-ocupacion').innerText = `${ocupacionPct.toFixed(1)}% (${loteArea.toFixed(2)} m² / ${topoArea.toFixed(2)} m²)`;
+    }
 
     app3d.renderTerrain(topoX, topoY, seqSlope.pendiente);
     app3d.renderPoligonalPuntos(numPuntos === 0 ? [] : puntos, topoX, topoY);
@@ -273,6 +326,38 @@ function updateAll() {
 
     app3d.updateSunPosition(horaSol);
     updateChart2D(currentStep, numPuntos, puntos, topoX, topoY, loteB, loteX);
+}
+
+function updateSolarBioclimaticBadge(horaSol) {
+    const badgeElem = document.getElementById('solar-badge');
+    const descElem = document.getElementById('solar-desc');
+    if (!badgeElem || !descElem) return;
+
+    if (horaSol >= 6.0 && horaSol < 9.5) {
+        badgeElem.className = 'badge-solar solar-green';
+        badgeElem.innerText = '🟢 Confort Térmico Templado (Sol Mañana)';
+        descElem.innerText = 'Baja radiación solar. Entorno fresco con iluminación natural suave.';
+    } else if (horaSol >= 9.5 && horaSol < 11.5) {
+        badgeElem.className = 'badge-solar solar-yellow';
+        badgeElem.innerText = '🟡 Iluminación Natural Óptima';
+        descElem.innerText = 'Excelente aprovechamiento solar para bienestar visual sin sobrecalentamiento.';
+    } else if (horaSol >= 11.5 && horaSol <= 14.5) {
+        badgeElem.className = 'badge-solar solar-red';
+        badgeElem.innerText = '🔴 Horas Pico de Radiación (Máxima Insolación)';
+        descElem.innerText = 'Alta carga térmica directa. Se recomiendan parasoles o aleros en fachadas expuestas.';
+    } else if (horaSol > 14.5 && horaSol <= 16.5) {
+        badgeElem.className = 'badge-solar solar-yellow';
+        badgeElem.innerText = '🟡 Exposición Tarde (Moderada)';
+        descElem.innerText = 'Insolación en declive. Adecuado para ventilación cruzada en diseño bioclimático.';
+    } else {
+        badgeElem.className = 'badge-solar solar-green';
+        badgeElem.innerText = '🟢 Confort Crepuscular (Sombra Proyectada)';
+        descElem.innerText = 'Radiación mínima. Sombras proyectadas alargadas para análisis ambiental.';
+    }
+}
+
+function exportarPDF() {
+    window.print();
 }
 
 function initChart2D() {
