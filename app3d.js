@@ -183,47 +183,83 @@ class App3D {
 
         if (numFloors <= 0) return;
 
-        const glassMat = new THREE.MeshStandardMaterial({
-            color: 0x38bdf8,
-            transparent: true,
-            opacity: 0.65,
-            roughness: 0.1,
-            metalness: 0.6
+        // Materiales de alta fidelidad arquitectónica
+        const concreteMat = new THREE.MeshStandardMaterial({
+            color: 0xe2e8f0, // Concreto estructural blanco/gris
+            roughness: 0.6,
+            metalness: 0.1
         });
 
-        const frameMat = new THREE.LineBasicMaterial({ color: 0x0284c7 });
+        const glassMat = new THREE.MeshStandardMaterial({
+            color: 0x38bdf8, // Cristal reflectante azul
+            transparent: true,
+            opacity: 0.55,
+            roughness: 0.1,
+            metalness: 0.8
+        });
+
+        const mullionMat = new THREE.MeshStandardMaterial({
+            color: 0x334155, // Perfiles de aluminio gris oscuro
+            roughness: 0.3,
+            metalness: 0.8
+        });
+
+        const slabThickness = 0.22;
+        const windowHeight = Math.max(0.1, floorHeight - slabThickness);
 
         for (let i = 0; i < numFloors; i++) {
-            const yPos = (i * floorHeight) + (floorHeight / 2) + 0.1;
+            const floorBaseY = i * floorHeight;
 
-            // Cuerpo del nivel / Losa principal
-            const slabGeom = new THREE.BoxGeometry(widthX, floorHeight * 0.92, lengthY);
-            const slabMat = new THREE.MeshStandardMaterial({
-                color: 0x0284c7,
-                transparent: true,
-                opacity: 0.85,
-                roughness: 0.3
-            });
-
-            const slab = new THREE.Mesh(slabGeom, slabMat);
-            slab.position.set(0, yPos, 0);
+            // 1. Losa de Entrepiso (Piso del nivel) - Concreto
+            const slabGeom = new THREE.BoxGeometry(widthX, slabThickness, lengthY);
+            const slab = new THREE.Mesh(slabGeom, concreteMat);
+            slab.position.set(0, floorBaseY + (slabThickness / 2) + 0.05, 0);
             slab.castShadow = true;
             slab.receiveShadow = true;
             this.buildingGroup.add(slab);
 
-            // Borde estructural/Líneas arquitectónicas
-            const edges = new THREE.EdgesGeometry(slabGeom);
-            const wireframe = new THREE.LineSegments(edges, frameMat);
-            wireframe.position.set(0, yPos, 0);
-            this.buildingGroup.add(wireframe);
+            const slabEdges = new THREE.EdgesGeometry(slabGeom);
+            const slabWire = new THREE.LineSegments(slabEdges, new THREE.LineBasicMaterial({ color: 0x94a3b8 }));
+            slabWire.position.copy(slab.position);
+            this.buildingGroup.add(slabWire);
 
-            // Ventanales predeterminados de cristal por fachada
-            const winMargin = 0.05;
-            const glassBoxGeom = new THREE.BoxGeometry(widthX + winMargin, floorHeight * 0.6, lengthY + winMargin);
-            const glassBox = new THREE.Mesh(glassBoxGeom, glassMat);
-            glassBox.position.set(0, yPos, 0);
+            // 2. Muro Cortina de Vidrio (Ventanales habitables)
+            const windowCenterY = floorBaseY + slabThickness + (windowHeight / 2) + 0.05;
+            const glassGeom = new THREE.BoxGeometry(widthX * 0.98, windowHeight, lengthY * 0.98);
+            const glassBox = new THREE.Mesh(glassGeom, glassMat);
+            glassBox.position.set(0, windowCenterY, 0);
             this.buildingGroup.add(glassBox);
+
+            // 3. Perfiles de Perímetro / Marcos
+            const windowEdges = new THREE.EdgesGeometry(glassGeom);
+            const windowWire = new THREE.LineSegments(windowEdges, new THREE.LineBasicMaterial({ color: 0x0284c7 }));
+            windowWire.position.copy(glassBox.position);
+            this.buildingGroup.add(windowWire);
+
+            // 4. Parantes verticales de aluminio (Mullions de fachada)
+            const mullionCountX = Math.max(1, Math.floor(widthX / 4));
+            for (let m = 1; m < mullionCountX; m++) {
+                const posX = -widthX/2 + (widthX / mullionCountX) * m;
+                const mullionGeom = new THREE.BoxGeometry(0.1, windowHeight, lengthY * 0.99);
+                const mullion = new THREE.Mesh(mullionGeom, mullionMat);
+                mullion.position.set(posX, windowCenterY, 0);
+                this.buildingGroup.add(mullion);
+            }
         }
+
+        // 5. Losa de Cubierta / Techo Final de Concreto
+        const roofBaseY = numFloors * floorHeight;
+        const roofGeom = new THREE.BoxGeometry(widthX * 1.02, slabThickness * 1.2, lengthY * 1.02);
+        const roofSlab = new THREE.Mesh(roofGeom, concreteMat);
+        roofSlab.position.set(0, roofBaseY + (slabThickness / 2) + 0.05, 0);
+        roofSlab.castShadow = true;
+        roofSlab.receiveShadow = true;
+        this.buildingGroup.add(roofSlab);
+
+        const roofEdges = new THREE.EdgesGeometry(roofGeom);
+        const roofWire = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x64748b }));
+        roofWire.position.copy(roofSlab.position);
+        this.buildingGroup.add(roofWire);
     }
 
     updateSunPosition(hour) {
