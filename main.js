@@ -3,6 +3,7 @@ let chart2d;
 let currentStep = 1;
 let numFloors = 1;
 let previousCotaH = 2500;
+let userHasModifiedPhase2 = false;
 
 // Estado global sincronizado del proyecto
 const state = {
@@ -31,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initChart2D();
     togglePuntosInput();
     setupEventListeners();
-    updateAll();
+    updateAll(true);
 });
 
 function goToStep(step) {
@@ -65,6 +66,25 @@ function changeFloors(delta) {
     updateAll();
 }
 
+function autoCalibratePhase2(topoArea) {
+    if (!topoArea || topoArea <= 0) return;
+
+    // Calcular una edificación inicial que represente ~65-75% del terreno levantado
+    const targetArea = MathEngine.round(topoArea * 0.70);
+    let xCalc = MathEngine.round(Math.sqrt(targetArea / 1.3), 1);
+    let yCalc = MathEngine.round(1.3 * xCalc, 1);
+    let bCalc = MathEngine.round(xCalc + yCalc, 0);
+
+    const elemB = document.getElementById('lote-b');
+    const elemX = document.getElementById('lote-x');
+
+    if (elemB && elemX) {
+        elemB.value = Math.max(20, Math.min(120, bCalc));
+        elemX.max = elemB.value;
+        elemX.value = Math.max(5, Math.min(parseFloat(elemB.value), xCalc));
+    }
+}
+
 function togglePuntosInput() {
     const numPuntos = parseInt(document.getElementById('num-puntos').value);
     const rectInputs = document.getElementById('rect-inputs');
@@ -89,14 +109,15 @@ function togglePuntosInput() {
             row.className = 'coord-row';
             row.innerHTML = `
                 <label>P${i}:</label>
-                <input type="number" id="p-${i}-e" value="${defaultE}" step="0.1" oninput="updateAll()" onchange="updateAll()">
-                <input type="number" id="p-${i}-n" value="${defaultN}" step="0.1" oninput="updateAll()" onchange="updateAll()">
-                <input type="number" id="p-${i}-z" value="${defaultZ}" step="0.1" oninput="updateAll()" onchange="updateAll()">
+                <input type="number" id="p-${i}-e" value="${defaultE}" step="0.1" oninput="updateAll(false, true)" onchange="updateAll(false, true)">
+                <input type="number" id="p-${i}-n" value="${defaultN}" step="0.1" oninput="updateAll(false, true)" onchange="updateAll(false, true)">
+                <input type="number" id="p-${i}-z" value="${defaultZ}" step="0.1" oninput="updateAll(false, true)" onchange="updateAll(false, true)">
             `;
             coordsList.appendChild(row);
         }
     }
-    updateAll();
+    userHasModifiedPhase2 = false;
+    updateAll(true);
 }
 
 function cargarCarteraRealClase() {
@@ -118,7 +139,8 @@ function cargarCarteraRealClase() {
         if (elemZ) elemZ.value = pt.Z;
     });
 
-    updateAll();
+    userHasModifiedPhase2 = false;
+    updateAll(true);
 }
 
 function getPuntosIngresados() {
@@ -154,8 +176,10 @@ function setupEventListeners() {
         const elem = document.getElementById(id);
         if (elem) {
             elem.addEventListener('input', () => {
+                if (id === 'lote-b' || id === 'lote-x') {
+                    userHasModifiedPhase2 = true;
+                }
                 if (id === 'lote-b') {
-                    // Sincronizar el máximo del slider de ancho 'x' para que no supere 'b'
                     const loteBVal = parseFloat(elem.value) || 50;
                     const loteXElem = document.getElementById('lote-x');
                     if (loteXElem) {
@@ -165,7 +189,8 @@ function setupEventListeners() {
                         }
                     }
                 }
-                updateAll();
+                const triggerAutoCalib = (id === 'topo-x' || id === 'topo-y') && !userHasModifiedPhase2;
+                updateAll(triggerAutoCalib);
             });
         }
     });
@@ -194,7 +219,7 @@ function setupEventListeners() {
     }
 }
 
-function updateAll() {
+function updateAll(forceAutoCalibratePhase2 = false, fromPolyInput = false) {
     const cotaH = parseFloat(document.getElementById('cota-h').value) || 2500;
     const numPuntos = parseInt(document.getElementById('num-puntos').value);
     const puntos = getPuntosIngresados();
@@ -221,6 +246,11 @@ function updateAll() {
 
     state.topoArea = topoArea;
     state.slopePercentage = seqSlope.pendiente;
+
+    // Autocalibración inteligente de Fase 2 para que NO empiece excediendo el lote
+    if ((forceAutoCalibratePhase2 || fromPolyInput) && !userHasModifiedPhase2) {
+        autoCalibratePhase2(topoArea);
+    }
 
     const topoVc = MathEngine.calculateExcavationVolume(topoArea, seqSlope.pendiente);
 
